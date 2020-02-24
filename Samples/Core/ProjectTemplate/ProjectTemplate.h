@@ -43,4 +43,6 @@ public:
     void onGuiRender(SampleCallbacks* pSample, Gui* pGui) override;
 
 private:
+
+    Camera::SharedPtr m_Camera;
 };
