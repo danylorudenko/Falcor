@@ -34,11 +34,48 @@ void ProjectTemplate::onGuiRender(SampleCallbacks* pSample, Gui* pGui)
     {
         msgBox("Now why would you do that?");
     }
+
+    if (pGui->addButton("Load Model"))
+    {
+        std::string fileName;
+        FileDialogFilterVec filters;
+        if (openFileDialog(Model::kFileExtensionFilters, fileName))
+        {
+            loadModelFromFile(fileName);
+        }
+    }
 }
 
 void ProjectTemplate::onLoad(SampleCallbacks* pSample, RenderContext* pRenderContext)
 {
     m_Camera = Camera::create();
+    m_CameraController.attachCamera(m_Camera);
+
+    m_GraphicsState = GraphicsState::create();
+
+    RasterizerState::Desc rastDesc;
+    rastDesc.setCullMode(RasterizerState::CullMode::Back);
+    m_ResterizerState = RasterizerState::create(rastDesc);
+
+    DepthStencilState::Desc dsDesc;
+    dsDesc.setDepthTest(true);
+    dsDesc.setDepthFunc(DepthStencilState::Func::LessEqual);
+    dsDesc.setDepthWriteMask(true);
+    m_DepthStencilState = DepthStencilState::create(dsDesc);
+
+    m_GraphicsProgram = GraphicsProgram::createFromFile("SimpleShader.ps.hlsl", "", "main");
+    m_GraphicsVars = GraphicsVars::create(m_GraphicsProgram->getReflector());
+}
+
+void ProjectTemplate::loadModelFromFile(std::string const& fileName)
+{
+    Model::LoadFlags flags = Model::LoadFlags::None;
+    m_TestModel = Model::createFromFile(fileName.c_str(), flags);
+    if (!m_TestModel)
+    {
+        msgBox("Failed to load model");
+        return;
+    }
 }
 
 void ProjectTemplate::onFrameRender(SampleCallbacks* pSample, RenderContext* pRenderContext, const Fbo::SharedPtr& pTargetFbo)
@@ -47,6 +84,19 @@ void ProjectTemplate::onFrameRender(SampleCallbacks* pSample, RenderContext* pRe
 
     const glm::vec4 clearColor(0.38f, 0.52f, 0.10f, 1);
     pRenderContext->clearFbo(pTargetFbo.get(), clearColor, 1.0f, 0, FboAttachmentType::All);
+
+    if (m_TestModel)
+    {
+        m_GraphicsState->setFbo(pTargetFbo);
+        m_GraphicsState->setProgram(m_GraphicsProgram);
+        m_GraphicsState->setRasterizerState(m_ResterizerState);
+        m_GraphicsState->setDepthStencilState(m_DepthStencilState);
+
+        pRenderContext->setGraphicsState(m_GraphicsState);
+        pRenderContext->setGraphicsVars(m_GraphicsVars);
+
+        ModelRenderer::render(pRenderContext, m_TestModel, m_Camera.get());
+    }
 }
 
 void ProjectTemplate::onShutdown(SampleCallbacks* pSample)
@@ -57,13 +107,13 @@ bool ProjectTemplate::onKeyEvent(SampleCallbacks* pSample, const KeyboardEvent& 
 {
     // hehe, boiiiiiiii
     //m_Camera->setPosition();
+    return m_CameraController.onKeyEvent(keyEvent);
 
-    return false;
 }
 
 bool ProjectTemplate::onMouseEvent(SampleCallbacks* pSample, const MouseEvent& mouseEvent)
 {
-    return false;
+    return m_CameraController.onMouseEvent(mouseEvent);
 }
 
 void ProjectTemplate::onDataReload(SampleCallbacks* pSample)

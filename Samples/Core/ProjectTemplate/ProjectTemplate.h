@@ -44,5 +44,15 @@ public:
 
 private:
 
-    Camera::SharedPtr m_Camera;
+    void loadModelFromFile(std::string const& fileName);
+
+    Camera::SharedPtr               m_Camera;
+    Model::SharedPtr                m_TestModel;
+    ModelViewCameraController       m_CameraController;
+
+    GraphicsState::SharedPtr        m_GraphicsState;
+    GraphicsVars::SharedPtr         m_GraphicsVars;
+    GraphicsProgram::SharedPtr      m_GraphicsProgram;
+    RasterizerState::SharedPtr      m_ResterizerState;
+    DepthStencilState::SharedPtr    m_DepthStencilState;
 };

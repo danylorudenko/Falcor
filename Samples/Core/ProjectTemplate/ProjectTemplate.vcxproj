@@ -21,6 +21,11 @@
       <Project>{3b602f0e-3834-4f73-b97d-7dfc91597a98}</Project>
     </ProjectReference>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="Data\SimpleShader.ps.hlsl">
+      <FileType>Document</FileType>
+    </None>
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{605856E4-34D4-40DF-B859-EEA3A7D52A7B}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>

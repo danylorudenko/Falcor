@@ -6,4 +6,7 @@
   <ItemGroup>
     <ClInclude Include="ProjectTemplate.h" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="Data\SimpleShader.ps.hlsl" />
+  </ItemGroup>
 </Project>
