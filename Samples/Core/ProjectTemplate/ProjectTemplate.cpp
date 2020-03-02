@@ -51,6 +51,12 @@ void ProjectTemplate::onLoad(SampleCallbacks* pSample, RenderContext* pRenderCon
     m_Camera = Camera::create();
     m_CameraController.attachCamera(m_Camera);
 
+    m_DirectionalLight = DirectionalLight::create();
+    m_DirectionalLight->setWorldDirection({0.0f, -1.0f, 0.0f});
+    m_DirectionalLight->setIntensity({1.0f, 1.0f, 1.0f});
+    m_DirectionalLight->setWorldParams({0.0f, 0.0f, 0.0f}, 1000.0f);
+    
+
     m_GraphicsState = GraphicsState::create();
 
     RasterizerState::Desc rastDesc;
@@ -91,7 +97,6 @@ void ProjectTemplate::onFrameRender(SampleCallbacks* pSample, RenderContext* pRe
 
     if (m_TestModel)
     {
-        m_Camera->setDepthRange(0.1f, 500.0f);
         m_CameraController.update();
 
         m_GraphicsState->setFbo(pTargetFbo);
@@ -100,6 +105,9 @@ void ProjectTemplate::onFrameRender(SampleCallbacks* pSample, RenderContext* pRe
         m_GraphicsState->setDepthStencilState(m_DepthStencilState);
 
         pRenderContext->setGraphicsState(m_GraphicsState);
+
+        m_DirectionalLight->setIntoProgramVars(m_GraphicsVars.get(), m_GraphicsVars["PerFrameCB"].get(), "gDirLight");
+        m_GraphicsVars["PerFrameCB"]["gAmbient"] = glm::vec3{ 0.2f, 0.2f, 0.2f };
         pRenderContext->setGraphicsVars(m_GraphicsVars);
 
         ModelRenderer::render(pRenderContext, m_TestModel, m_Camera.get(), false);
@@ -112,8 +120,6 @@ void ProjectTemplate::onShutdown(SampleCallbacks* pSample)
 
 bool ProjectTemplate::onKeyEvent(SampleCallbacks* pSample, const KeyboardEvent& keyEvent)
 {
-    // hehe, boiiiiiiii
-    //m_Camera->setPosition();
     return m_CameraController.onKeyEvent(keyEvent);
 
 }
@@ -136,6 +142,7 @@ void ProjectTemplate::onResizeSwapChain(SampleCallbacks* pSample, uint32_t width
     m_Camera->setFocalLength(21.0f);
     float aspectRatio = (w / h);
     m_Camera->setAspectRatio(aspectRatio);
+    m_Camera->setDepthRange(0.1f, 1000.0f);
 }
 
 void ProjectTemplate::resetCamera()

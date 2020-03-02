@@ -50,6 +50,7 @@ private:
     Camera::SharedPtr               m_Camera;
     Model::SharedPtr                m_TestModel;
     ModelViewCameraController       m_CameraController;
+    DirectionalLight::SharedPtr     m_DirectionalLight;
 
     GraphicsState::SharedPtr        m_GraphicsState;
     GraphicsVars::SharedPtr         m_GraphicsVars;
