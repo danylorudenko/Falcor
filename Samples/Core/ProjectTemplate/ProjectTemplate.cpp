@@ -65,6 +65,8 @@ void ProjectTemplate::onLoad(SampleCallbacks* pSample, RenderContext* pRenderCon
 
     m_GraphicsProgram = GraphicsProgram::createFromFile("SimpleShader.ps.hlsl", "", "main");
     m_GraphicsVars = GraphicsVars::create(m_GraphicsProgram->getReflector());
+
+    loadModelFromFile("D:\\Assets\\SunTemple_v3\\SunTemple\\SunTemple.fbx");
 }
 
 void ProjectTemplate::loadModelFromFile(std::string const& fileName)
@@ -76,6 +78,8 @@ void ProjectTemplate::loadModelFromFile(std::string const& fileName)
         msgBox("Failed to load model");
         return;
     }
+
+    resetCamera();
 }
 
 void ProjectTemplate::onFrameRender(SampleCallbacks* pSample, RenderContext* pRenderContext, const Fbo::SharedPtr& pTargetFbo)
@@ -87,6 +91,9 @@ void ProjectTemplate::onFrameRender(SampleCallbacks* pSample, RenderContext* pRe
 
     if (m_TestModel)
     {
+        m_Camera->setDepthRange(0.1f, 500.0f);
+        m_CameraController.update();
+
         m_GraphicsState->setFbo(pTargetFbo);
         m_GraphicsState->setProgram(m_GraphicsProgram);
         m_GraphicsState->setRasterizerState(m_ResterizerState);
@@ -95,7 +102,7 @@ void ProjectTemplate::onFrameRender(SampleCallbacks* pSample, RenderContext* pRe
         pRenderContext->setGraphicsState(m_GraphicsState);
         pRenderContext->setGraphicsVars(m_GraphicsVars);
 
-        ModelRenderer::render(pRenderContext, m_TestModel, m_Camera.get());
+        ModelRenderer::render(pRenderContext, m_TestModel, m_Camera.get(), false);
     }
 }
 
@@ -123,6 +130,33 @@ void ProjectTemplate::onDataReload(SampleCallbacks* pSample)
 
 void ProjectTemplate::onResizeSwapChain(SampleCallbacks* pSample, uint32_t width, uint32_t height)
 {
+    float h = (float)height;
+    float w = (float)width;
+
+    m_Camera->setFocalLength(21.0f);
+    float aspectRatio = (w / h);
+    m_Camera->setAspectRatio(aspectRatio);
+}
+
+void ProjectTemplate::resetCamera()
+{
+    if (m_TestModel)
+    {
+        // update the camera position
+        float Radius = m_TestModel->getRadius();
+        const glm::vec3& ModelCenter = m_TestModel->getCenter();
+        glm::vec3 CamPos = ModelCenter;
+        CamPos.z += Radius * 5;
+
+        m_Camera->setPosition(CamPos);
+        m_Camera->setTarget(ModelCenter);
+        m_Camera->setUpVector(glm::vec3(0, 1, 0));
+
+        // Update the controllers
+        m_CameraController.setModelParams(ModelCenter, Radius, 3.5f);
+        //mFirstPersonCameraController.setCameraSpeed(Radius*0.25f);
+        //m6DoFCameraController.setCameraSpeed(Radius*0.25f);
+    }
 }
 
 int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ LPSTR lpCmdLine, _In_ int nShowCmd)

@@ -45,6 +45,7 @@ public:
 private:
 
     void loadModelFromFile(std::string const& fileName);
+    void resetCamera();
 
     Camera::SharedPtr               m_Camera;
     Model::SharedPtr                m_TestModel;
