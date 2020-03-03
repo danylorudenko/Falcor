@@ -50,6 +50,7 @@ private:
     void resetCamera();
 
     Model::SharedPtr                m_TestModel;
+    Sampler::SharedPtr              m_Sampler;
 
     Camera::SharedPtr               m_Camera;
     ModelViewCameraController       m_MVCameraController;

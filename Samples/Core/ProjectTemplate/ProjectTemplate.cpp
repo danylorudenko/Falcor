@@ -64,7 +64,7 @@ void ProjectTemplate::onLoad(SampleCallbacks* pSample, RenderContext* pRenderCon
     m_MVCameraController.attachCamera(m_Camera);
 
     m_DirectionalLight = DirectionalLight::create();
-    m_DirectionalLight->setWorldDirection({0.0f, -1.0f, 0.0f});
+    m_DirectionalLight->setWorldDirection({0.0f, -1.0f, 0.3f});
     m_DirectionalLight->setIntensity({15.0f, 15.0f, 15.0f});
     m_DirectionalLight->setWorldParams({0.0f, 0.0f, 0.0f}, 1000.0f);
 
@@ -83,7 +83,11 @@ void ProjectTemplate::onLoad(SampleCallbacks* pSample, RenderContext* pRenderCon
     m_GraphicsProgram = GraphicsProgram::createFromFile("SimpleShader.ps.hlsl", "", "main");
     m_GraphicsVars = GraphicsVars::create(m_GraphicsProgram->getReflector());
 
-    loadModelFromFile("D:\\Assets\\SunTemple_v3\\SunTemple\\SunTemple.fbx");
+    Sampler::Desc samplerDesc;
+    samplerDesc.setFilterMode(Sampler::Filter::Linear, Sampler::Filter::Linear, Sampler::Filter::Linear);
+    m_Sampler = Sampler::create(samplerDesc);
+
+    loadModelFromFile("J:\\Assets\\SunTemple_v3\\SunTemple\\SunTemple.fbx");
 }
 
 void ProjectTemplate::loadModelFromFile(std::string const& fileName)
@@ -96,6 +100,7 @@ void ProjectTemplate::loadModelFromFile(std::string const& fileName)
         return;
     }
 
+    m_TestModel->bindSamplerToMaterials(m_Sampler);
     resetCamera();
 }
 
@@ -202,7 +207,9 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
     ProjectTemplate::UniquePtr pRenderer = std::make_unique<ProjectTemplate>();
     SampleConfig config;
     config.windowDesc.title = "drudenko project";
-    config.windowDesc.resizableWindow = true;
+    config.windowDesc.resizableWindow = false;
+    config.windowDesc.width = 1200;
+    config.windowDesc.height = 800;
     Sample::run(config, pRenderer);
     return 0;
 }
