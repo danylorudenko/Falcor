@@ -89,7 +89,8 @@ float3 evalDiffuseBrdf(ShadingData sd, LightSample ls)
 #elif DiffuseBrdf == DiffuseBrdfDisney
     return evalDiffuseDisneyBrdf(sd, ls);
 #elif DiffuseBrdf == DiffuseBrdfFrostbite
-    return evalDiffuseFrostbiteBrdf(sd, ls);
+    //return evalDiffuseFrostbiteBrdf(sd, ls);
+    return float3(0.0, 0.0, 0.0);
 #endif
 }
 

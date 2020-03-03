@@ -27,6 +27,11 @@
 ***************************************************************************/
 #include "ProjectTemplate.h"
 
+ProjectTemplate::ProjectTemplate()
+    : Renderer{}
+    , m_IsFirstPerson{ true }
+{}
+
 void ProjectTemplate::onGuiRender(SampleCallbacks* pSample, Gui* pGui)
 {
     pGui->addText("Hello from ProjectTemplate");
@@ -44,18 +49,24 @@ void ProjectTemplate::onGuiRender(SampleCallbacks* pSample, Gui* pGui)
             loadModelFromFile(fileName);
         }
     }
+
+    if (pGui->addCheckBox("Enable FirstPerson Camera", m_IsFirstPerson))
+    {
+        resetCamera();
+    }
 }
 
 void ProjectTemplate::onLoad(SampleCallbacks* pSample, RenderContext* pRenderContext)
 {
     m_Camera = Camera::create();
-    m_CameraController.attachCamera(m_Camera);
+
+    m_FPCameraController.attachCamera(m_Camera);
+    m_MVCameraController.attachCamera(m_Camera);
 
     m_DirectionalLight = DirectionalLight::create();
     m_DirectionalLight->setWorldDirection({0.0f, -1.0f, 0.0f});
-    m_DirectionalLight->setIntensity({1.0f, 1.0f, 1.0f});
+    m_DirectionalLight->setIntensity({15.0f, 15.0f, 15.0f});
     m_DirectionalLight->setWorldParams({0.0f, 0.0f, 0.0f}, 1000.0f);
-    
 
     m_GraphicsState = GraphicsState::create();
 
@@ -97,7 +108,15 @@ void ProjectTemplate::onFrameRender(SampleCallbacks* pSample, RenderContext* pRe
 
     if (m_TestModel)
     {
-        m_CameraController.update();
+        if (m_IsFirstPerson)
+        {
+            m_FPCameraController.update();
+
+        }
+        else
+        {
+            m_MVCameraController.update();
+        }
 
         m_GraphicsState->setFbo(pTargetFbo);
         m_GraphicsState->setProgram(m_GraphicsProgram);
@@ -110,7 +129,7 @@ void ProjectTemplate::onFrameRender(SampleCallbacks* pSample, RenderContext* pRe
         m_GraphicsVars["PerFrameCB"]["gAmbient"] = glm::vec3{ 0.2f, 0.2f, 0.2f };
         pRenderContext->setGraphicsVars(m_GraphicsVars);
 
-        ModelRenderer::render(pRenderContext, m_TestModel, m_Camera.get(), false);
+        ModelRenderer::render(pRenderContext, m_TestModel, m_Camera.get());
     }
 }
 
@@ -120,13 +139,26 @@ void ProjectTemplate::onShutdown(SampleCallbacks* pSample)
 
 bool ProjectTemplate::onKeyEvent(SampleCallbacks* pSample, const KeyboardEvent& keyEvent)
 {
-    return m_CameraController.onKeyEvent(keyEvent);
-
+    if (m_IsFirstPerson)
+    {
+        return m_FPCameraController.onKeyEvent(keyEvent);
+    }
+    else
+    {
+        return m_MVCameraController.onKeyEvent(keyEvent);
+    }
 }
 
 bool ProjectTemplate::onMouseEvent(SampleCallbacks* pSample, const MouseEvent& mouseEvent)
 {
-    return m_CameraController.onMouseEvent(mouseEvent);
+    if (m_IsFirstPerson)
+    {
+        return m_FPCameraController.onMouseEvent(mouseEvent);
+    }
+    else
+    {
+        return m_MVCameraController.onMouseEvent(mouseEvent);
+    }
 }
 
 void ProjectTemplate::onDataReload(SampleCallbacks* pSample)
@@ -150,19 +182,18 @@ void ProjectTemplate::resetCamera()
     if (m_TestModel)
     {
         // update the camera position
-        float Radius = m_TestModel->getRadius();
-        const glm::vec3& ModelCenter = m_TestModel->getCenter();
-        glm::vec3 CamPos = ModelCenter;
-        CamPos.z += Radius * 5;
+        float radius = m_TestModel->getRadius();
+        const glm::vec3& modelCenter = m_TestModel->getCenter();
+        glm::vec3 camPos = modelCenter;
+        camPos.z += radius;
 
-        m_Camera->setPosition(CamPos);
-        m_Camera->setTarget(ModelCenter);
+        m_Camera->setPosition(camPos);
+        m_Camera->setTarget(modelCenter);
         m_Camera->setUpVector(glm::vec3(0, 1, 0));
 
         // Update the controllers
-        m_CameraController.setModelParams(ModelCenter, Radius, 3.5f);
-        //mFirstPersonCameraController.setCameraSpeed(Radius*0.25f);
-        //m6DoFCameraController.setCameraSpeed(Radius*0.25f);
+        m_MVCameraController.setModelParams(modelCenter, radius, 3.5f);
+        m_FPCameraController.setCameraSpeed(radius * 0.25f);
     }
 }
 

@@ -33,6 +33,8 @@ using namespace Falcor;
 class ProjectTemplate : public Renderer
 {
 public:
+    ProjectTemplate();
+
     void onLoad(SampleCallbacks* pSample, RenderContext* pRenderContext) override;
     void onFrameRender(SampleCallbacks* pSample, RenderContext* pRenderContext, const Fbo::SharedPtr& pTargetFbo) override;
     void onShutdown(SampleCallbacks* pSample) override;
@@ -47,9 +49,13 @@ private:
     void loadModelFromFile(std::string const& fileName);
     void resetCamera();
 
-    Camera::SharedPtr               m_Camera;
     Model::SharedPtr                m_TestModel;
-    ModelViewCameraController       m_CameraController;
+
+    Camera::SharedPtr               m_Camera;
+    ModelViewCameraController       m_MVCameraController;
+    FirstPersonCameraController     m_FPCameraController;
+    bool                            m_IsFirstPerson;
+
     DirectionalLight::SharedPtr     m_DirectionalLight;
 
     GraphicsState::SharedPtr        m_GraphicsState;
