@@ -64,4 +64,11 @@ private:
     GraphicsProgram::SharedPtr      m_GraphicsProgram;
     RasterizerState::SharedPtr      m_ResterizerState;
     DepthStencilState::SharedPtr    m_DepthStencilState;
+
+    SkyBox::SharedPtr               m_SkyBox;
+    DepthStencilState::SharedPtr    m_SkyBoxDepthStencil;
+
+
+    Scene::SharedPtr                m_MainScene;
+    SceneRenderer::SharedPtr        m_MainSceneRenderer;
 };

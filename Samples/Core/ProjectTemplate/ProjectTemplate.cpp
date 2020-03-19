@@ -87,6 +87,12 @@ void ProjectTemplate::onLoad(SampleCallbacks* pSample, RenderContext* pRenderCon
     samplerDesc.setFilterMode(Sampler::Filter::Linear, Sampler::Filter::Linear, Sampler::Filter::Linear);
     m_Sampler = Sampler::create(samplerDesc);
 
+    m_SkyBox = SkyBox::create("J:\\Assets\\SunTemple_v3\\SunTemple\\SunTemple_Skybox.hdr", true, m_Sampler);
+
+    m_MainScene = Scene::create("MainScene");
+    m_MainSceneRenderer = SceneRenderer::create(m_MainScene);
+    m_MainSceneRenderer->toggleMeshCulling(true);
+
     loadModelFromFile("J:\\Assets\\SunTemple_v3\\SunTemple\\SunTemple.fbx");
 }
 
@@ -102,6 +108,8 @@ void ProjectTemplate::loadModelFromFile(std::string const& fileName)
 
     m_TestModel->bindSamplerToMaterials(m_Sampler);
     resetCamera();
+
+    m_MainScene->addModelInstance(m_TestModel, "MainModelInstance");
 }
 
 void ProjectTemplate::onFrameRender(SampleCallbacks* pSample, RenderContext* pRenderContext, const Fbo::SharedPtr& pTargetFbo)
@@ -128,13 +136,16 @@ void ProjectTemplate::onFrameRender(SampleCallbacks* pSample, RenderContext* pRe
         m_GraphicsState->setRasterizerState(m_ResterizerState);
         m_GraphicsState->setDepthStencilState(m_DepthStencilState);
 
+        m_SkyBox->render(pRenderContext, m_Camera.get());
+
         pRenderContext->setGraphicsState(m_GraphicsState);
 
         m_DirectionalLight->setIntoProgramVars(m_GraphicsVars.get(), m_GraphicsVars["PerFrameCB"].get(), "gDirLight");
         m_GraphicsVars["PerFrameCB"]["gAmbient"] = glm::vec3{ 0.2f, 0.2f, 0.2f };
         pRenderContext->setGraphicsVars(m_GraphicsVars);
 
-        ModelRenderer::render(pRenderContext, m_TestModel, m_Camera.get());
+        //ModelRenderer::render(pRenderContext, m_TestModel, m_Camera.get());
+        m_MainSceneRenderer->renderScene(pRenderContext, m_Camera.get());
     }
 }
 
