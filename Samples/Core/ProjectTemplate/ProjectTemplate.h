@@ -49,6 +49,9 @@ private:
     void loadModelFromFile(std::string const& fileName);
     void resetCamera();
 
+
+    // Scene
+    /////////////////////////////////////////////
     Model::SharedPtr                m_TestModel;
     Sampler::SharedPtr              m_Sampler;
 
@@ -59,6 +62,12 @@ private:
 
     DirectionalLight::SharedPtr     m_DirectionalLight;
 
+    Scene::SharedPtr                m_MainScene;
+    SceneRenderer::SharedPtr        m_MainSceneRenderer;
+    
+
+    // Default Gfx Objects
+    /////////////////////////////////////////////
     GraphicsState::SharedPtr        m_GraphicsState;
     GraphicsVars::SharedPtr         m_GraphicsVars;
     GraphicsProgram::SharedPtr      m_GraphicsProgram;
@@ -67,8 +76,12 @@ private:
 
     SkyBox::SharedPtr               m_SkyBox;
     DepthStencilState::SharedPtr    m_SkyBoxDepthStencil;
+    
 
+    // Main Fbo Pass
+    /////////////////////////////////////////////
+    Texture::SharedPtr              m_MainRenderTargetTexture;
+    Texture::SharedPtr              m_MainRenderTargetDepth;
+    Fbo::SharedPtr                  m_MainFbo;
 
-    Scene::SharedPtr                m_MainScene;
-    SceneRenderer::SharedPtr        m_MainSceneRenderer;
 };

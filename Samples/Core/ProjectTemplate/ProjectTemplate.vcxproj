@@ -14,6 +14,7 @@
     <ClCompile Include="ProjectTemplate.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="GlobalConstants.h" />
     <ClInclude Include="ProjectTemplate.h" />
   </ItemGroup>
   <ItemGroup>

@@ -27,6 +27,8 @@
 ***************************************************************************/
 #include "ProjectTemplate.h"
 
+#include "GlobalConstants.h"
+
 ProjectTemplate::ProjectTemplate()
     : Renderer{}
     , m_IsFirstPerson{ true }
@@ -94,6 +96,24 @@ void ProjectTemplate::onLoad(SampleCallbacks* pSample, RenderContext* pRenderCon
     m_MainSceneRenderer->toggleMeshCulling(true);
 
     loadModelFromFile("J:\\Assets\\SunTemple_v3\\SunTemple\\SunTemple.fbx");
+
+    m_MainRenderTargetTexture = Texture::create2D(
+        C_RENDER_TARGET_RESOLUTION_X, C_RENDER_TARGET_RESOLUTION_Y,
+        ResourceFormat::RGBA8Unorm, 1, 1, nullptr,
+        Resource::BindFlags::RenderTarget | Resource::BindFlags::ShaderResource
+    );
+
+    m_MainRenderTargetDepth = Texture::create2D(
+        C_RENDER_TARGET_RESOLUTION_X, C_RENDER_TARGET_RESOLUTION_Y,
+        ResourceFormat::D16Unorm, 1, 1, nullptr,
+        Resource::BindFlags::DepthStencil
+    );
+
+    //m_MainRenderTargetView = m_MainRenderTargetTexture->getRTV();
+
+    m_MainFbo = Fbo::create();
+    m_MainFbo->attachColorTarget(m_MainRenderTargetTexture, 0, 0, 0, 1);
+    m_MainFbo->attachDepthStencilTarget(m_MainRenderTargetDepth, 0, 0, 1);
 }
 
 void ProjectTemplate::loadModelFromFile(std::string const& fileName)
@@ -116,8 +136,8 @@ void ProjectTemplate::onFrameRender(SampleCallbacks* pSample, RenderContext* pRe
 {
     m_Camera->beginFrame();
 
-    const glm::vec4 clearColor(0.38f, 0.52f, 0.10f, 1);
-    pRenderContext->clearFbo(pTargetFbo.get(), clearColor, 1.0f, 0, FboAttachmentType::All);
+    const glm::vec4 clearColor(0.1f, 0.1f, 0.1f, 1);
+    pRenderContext->clearFbo(m_MainFbo.get(), clearColor, 1.0f, 0, FboAttachmentType::All);
 
     if (m_TestModel)
     {
@@ -131,12 +151,12 @@ void ProjectTemplate::onFrameRender(SampleCallbacks* pSample, RenderContext* pRe
             m_MVCameraController.update();
         }
 
-        m_GraphicsState->setFbo(pTargetFbo);
+        m_GraphicsState->setFbo(m_MainFbo);
         m_GraphicsState->setProgram(m_GraphicsProgram);
         m_GraphicsState->setRasterizerState(m_ResterizerState);
         m_GraphicsState->setDepthStencilState(m_DepthStencilState);
 
-        m_SkyBox->render(pRenderContext, m_Camera.get());
+        m_SkyBox->render(pRenderContext, m_Camera.get(), m_MainFbo);
 
         pRenderContext->setGraphicsState(m_GraphicsState);
 
@@ -144,9 +164,15 @@ void ProjectTemplate::onFrameRender(SampleCallbacks* pSample, RenderContext* pRe
         m_GraphicsVars["PerFrameCB"]["gAmbient"] = glm::vec3{ 0.2f, 0.2f, 0.2f };
         pRenderContext->setGraphicsVars(m_GraphicsVars);
 
-        //ModelRenderer::render(pRenderContext, m_TestModel, m_Camera.get());
         m_MainSceneRenderer->renderScene(pRenderContext, m_Camera.get());
     }
+
+    pRenderContext->blit(
+        m_MainRenderTargetTexture->getSRV(), pTargetFbo->getColorTexture(0)->getRTV(),
+        uvec4{ 0, 0, C_RENDER_TARGET_RESOLUTION_X, C_RENDER_TARGET_RESOLUTION_Y },
+        uvec4{ 0, 0, C_RENDER_TARGET_RESOLUTION_X, C_RENDER_TARGET_RESOLUTION_Y },
+        Sampler::Filter::Point
+    );
 }
 
 void ProjectTemplate::onShutdown(SampleCallbacks* pSample)
@@ -219,8 +245,8 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
     SampleConfig config;
     config.windowDesc.title = "drudenko project";
     config.windowDesc.resizableWindow = false;
-    config.windowDesc.width = 1200;
-    config.windowDesc.height = 800;
+    config.windowDesc.width = C_RENDER_TARGET_RESOLUTION_X;
+    config.windowDesc.height = C_RENDER_TARGET_RESOLUTION_Y;
     Sample::run(config, pRenderer);
     return 0;
 }
