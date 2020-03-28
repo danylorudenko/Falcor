@@ -84,4 +84,9 @@ private:
     Texture::SharedPtr              m_MainRenderTargetDepth;
     Fbo::SharedPtr                  m_MainFbo;
 
+    // Tonemap Pass
+    Texture::SharedPtr              m_TonemapTargetTexture;
+    ComputeProgram::SharedPtr       m_TonemapProgram;
+    ComputeState::SharedPtr         m_TonemapState;
+    ComputeVars::SharedPtr          m_TonemapVars;
 };

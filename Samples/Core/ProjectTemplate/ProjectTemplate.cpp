@@ -99,7 +99,7 @@ void ProjectTemplate::onLoad(SampleCallbacks* pSample, RenderContext* pRenderCon
 
     m_MainRenderTargetTexture = Texture::create2D(
         C_RENDER_TARGET_RESOLUTION_X, C_RENDER_TARGET_RESOLUTION_Y,
-        ResourceFormat::RGBA8Unorm, 1, 1, nullptr,
+        ResourceFormat::RGBA16Float, 1, 1, nullptr,
         Resource::BindFlags::RenderTarget | Resource::BindFlags::ShaderResource
     );
 
@@ -114,6 +114,16 @@ void ProjectTemplate::onLoad(SampleCallbacks* pSample, RenderContext* pRenderCon
     m_MainFbo = Fbo::create();
     m_MainFbo->attachColorTarget(m_MainRenderTargetTexture, 0, 0, 0, 1);
     m_MainFbo->attachDepthStencilTarget(m_MainRenderTargetDepth, 0, 0, 1);
+
+    m_TonemapTargetTexture = Texture::create2D(
+        C_RENDER_TARGET_RESOLUTION_X, C_RENDER_TARGET_RESOLUTION_Y,
+        ResourceFormat::RGBA8Unorm, 1, 1, nullptr,
+        Resource::BindFlags::UnorderedAccess | Resource::BindFlags::ShaderResource
+    );
+    m_TonemapProgram = ComputeProgram::createFromFile("Tonemap.hlsl", "main");
+    m_TonemapState = ComputeState::create();
+    m_TonemapState->setProgram(m_TonemapProgram);
+    m_TonemapVars = ComputeVars::create(m_TonemapProgram->getReflector());
 }
 
 void ProjectTemplate::loadModelFromFile(std::string const& fileName)
@@ -167,8 +177,16 @@ void ProjectTemplate::onFrameRender(SampleCallbacks* pSample, RenderContext* pRe
         m_MainSceneRenderer->renderScene(pRenderContext, m_Camera.get());
     }
 
+    m_TonemapVars->setTexture("g_InputTexture", m_MainRenderTargetTexture);
+    m_TonemapVars->setTexture("g_OutputTexture", m_TonemapTargetTexture);
+    pRenderContext->setComputeState(m_TonemapState);
+    pRenderContext->setComputeVars(m_TonemapVars);
+    std::uint32_t const xDim = C_RENDER_TARGET_RESOLUTION_X / 16 + 1;
+    std::uint32_t const yDim = C_RENDER_TARGET_RESOLUTION_Y / 16 + 1;
+    pRenderContext->dispatch(xDim, yDim, 1);
+
     pRenderContext->blit(
-        m_MainRenderTargetTexture->getSRV(), pTargetFbo->getColorTexture(0)->getRTV(),
+        m_TonemapTargetTexture->getSRV(), pTargetFbo->getColorTexture(0)->getRTV(),
         uvec4{ 0, 0, C_RENDER_TARGET_RESOLUTION_X, C_RENDER_TARGET_RESOLUTION_Y },
         uvec4{ 0, 0, C_RENDER_TARGET_RESOLUTION_X, C_RENDER_TARGET_RESOLUTION_Y },
         Sampler::Filter::Point

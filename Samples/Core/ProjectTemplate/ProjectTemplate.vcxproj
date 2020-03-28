@@ -27,6 +27,11 @@
       <FileType>Document</FileType>
     </None>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="Data\Tonemap.hlsl">
+      <FileType>Document</FileType>
+    </None>
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{605856E4-34D4-40DF-B859-EEA3A7D52A7B}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
