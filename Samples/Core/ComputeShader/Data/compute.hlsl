@@ -33,14 +33,15 @@ groupshared float4 colors[16][16];
 groupshared float4 pixelated;
 
 [numthreads(16, 16, 1)]
-void main(uint3 groupId : SV_GroupID, uint3 groupThreadId : SV_GroupThreadId)
+void main(uint3 groupId : SV_GroupID, uint3 groupThreadId : SV_GroupThreadId, uint3 dispatchId : SV_DispatchThreadId)
 {
     // Calculate the start position of the block    
-    uint3 resDim;
-    gOutput.GetDimensions(resDim.x, resDim.y);
+    //uint3 resDim;
+    //gOutput.GetDimensions(resDim.x, resDim.y);
 
-    uint2 posStart = groupId.xy * 16;
-    uint2 crd = posStart + groupThreadId.xy;
+    //uint2 posStart = groupId.xy * 16;
+    //uint2 crd = posStart + groupThreadId.xy;
+    uint2 crd = dispatchId.xy;
 
     // Fetch all of the data into the shared local memory
     colors[groupThreadId.x][groupThreadId.y] = gInput[crd];

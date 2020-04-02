@@ -34,6 +34,8 @@ ProjectTemplate::ProjectTemplate()
     , m_IsFirstPerson{ true }
 {}
 
+static int enableTonemapping = true;
+
 void ProjectTemplate::onGuiRender(SampleCallbacks* pSample, Gui* pGui)
 {
     pGui->addText("Hello from ProjectTemplate");
@@ -56,6 +58,21 @@ void ProjectTemplate::onGuiRender(SampleCallbacks* pSample, Gui* pGui)
     {
         resetCamera();
     }
+
+    pGui->addSeparator();
+
+    if (pGui->beginGroup("TonemapParams", true))
+    {
+        pGui->addCheckBox("Enable tonemapping", enableTonemapping);
+
+        pGui->addFloatVar("P", m_TonemapParams.P);
+        pGui->addFloatVar("a", m_TonemapParams.a);
+        pGui->addFloatVar("m", m_TonemapParams.m);
+        pGui->addFloatVar("l", m_TonemapParams.l);
+        pGui->addFloatVar("c", m_TonemapParams.c);
+        pGui->addFloatVar("b", m_TonemapParams.b);
+        pGui->endGroup();
+    }
 }
 
 void ProjectTemplate::onLoad(SampleCallbacks* pSample, RenderContext* pRenderContext)
@@ -66,8 +83,8 @@ void ProjectTemplate::onLoad(SampleCallbacks* pSample, RenderContext* pRenderCon
     m_MVCameraController.attachCamera(m_Camera);
 
     m_DirectionalLight = DirectionalLight::create();
-    m_DirectionalLight->setWorldDirection({0.0f, -1.0f, 0.3f});
-    m_DirectionalLight->setIntensity({15.0f, 15.0f, 15.0f});
+    m_DirectionalLight->setWorldDirection({0.0f, 0.0f, 1.0f});
+    m_DirectionalLight->setIntensity({1.0f, 1.0f, 1.0f});
     m_DirectionalLight->setWorldParams({0.0f, 0.0f, 0.0f}, 1000.0f);
 
     m_GraphicsState = GraphicsState::create();
@@ -120,10 +137,29 @@ void ProjectTemplate::onLoad(SampleCallbacks* pSample, RenderContext* pRenderCon
         ResourceFormat::RGBA8Unorm, 1, 1, nullptr,
         Resource::BindFlags::UnorderedAccess | Resource::BindFlags::ShaderResource
     );
-    m_TonemapProgram = ComputeProgram::createFromFile("Tonemap.hlsl", "main");
+    m_TonemapProgram = ComputeProgram::createFromFile("Tonemap.hlsl", "mainTonemap");
     m_TonemapState = ComputeState::create();
     m_TonemapState->setProgram(m_TonemapProgram);
     m_TonemapVars = ComputeVars::create(m_TonemapProgram->getReflector());
+
+    m_TonemapLUT = Texture::create1D(128, ResourceFormat::R8Unorm, 1, 1, nullptr, Resource::BindFlags::UnorderedAccess);
+    m_TonemapGenProgram = ComputeProgram::createFromFile("Tonemap.hlsl", "mainGenLUT");
+    m_TonemapGenState = ComputeState::create();
+    m_TonemapGenState->setProgram(m_TonemapGenProgram);
+    m_TonemapGenVars = ComputeVars::create(m_TonemapGenProgram->getReflector());
+
+
+    m_TonemapGenVars->setTexture("g_TonemapLUT", m_TonemapLUT);
+    m_TonemapGenVars["TonemapParamsAlt"]->setVariable("PMem", m_TonemapParams.P);
+    m_TonemapGenVars["TonemapParamsAlt"]->setVariable("aMem", m_TonemapParams.a);
+    m_TonemapGenVars["TonemapParamsAlt"]->setVariable("mMem", m_TonemapParams.m);
+    m_TonemapGenVars["TonemapParamsAlt"]->setVariable("lMem", m_TonemapParams.l);
+    m_TonemapGenVars["TonemapParamsAlt"]->setVariable("cMem", m_TonemapParams.c);
+    m_TonemapGenVars["TonemapParamsAlt"]->setVariable("bMem", m_TonemapParams.b);
+    m_TonemapGenVars["TonemapParamsAlt"]->setVariable("enableTonemapping", enableTonemapping);
+    pRenderContext->setComputeState(m_TonemapGenState);
+    pRenderContext->setComputeVars(m_TonemapGenVars);
+    pRenderContext->dispatch(4, 1, 1);
 }
 
 void ProjectTemplate::loadModelFromFile(std::string const& fileName)
@@ -140,6 +176,9 @@ void ProjectTemplate::loadModelFromFile(std::string const& fileName)
     resetCamera();
 
     m_MainScene->addModelInstance(m_TestModel, "MainModelInstance");
+
+    m_Camera->setPosition({ 6.54264307f, 6.81390476f, 4.28869581f });
+    m_Camera->setTarget({ 5.84925079f, 6.79420948f, 3.56840467f });
 }
 
 void ProjectTemplate::onFrameRender(SampleCallbacks* pSample, RenderContext* pRenderContext, const Fbo::SharedPtr& pTargetFbo)
@@ -177,8 +216,26 @@ void ProjectTemplate::onFrameRender(SampleCallbacks* pSample, RenderContext* pRe
         m_MainSceneRenderer->renderScene(pRenderContext, m_Camera.get());
     }
 
+    ////////////////////////
+    // for debugging we'll generate TonemapLUT each frame
+    //m_TonemapGenVars->setTexture("g_TonemapLUT", m_TonemapLUT);
+    //m_TonemapGenVars["TonemapParamsAlt"]["PMem"] = m_TonemapParams.P;
+    //m_TonemapGenVars["TonemapParamsAlt"]["aMem"] = m_TonemapParams.a;
+    //m_TonemapGenVars["TonemapParamsAlt"]["mMem"] = m_TonemapParams.m;
+    //m_TonemapGenVars["TonemapParamsAlt"]["lMem"] = m_TonemapParams.l;
+    //m_TonemapGenVars["TonemapParamsAlt"]["cMem"] = m_TonemapParams.c;
+    //m_TonemapGenVars["TonemapParamsAlt"]["bMem"] = m_TonemapParams.b;
+    //m_TonemapGenVars["TonemapParamsAlt"]->setVariable("enableTonemapping", enableTonemapping);
+    pRenderContext->setComputeVars(m_TonemapGenVars);
+    pRenderContext->setComputeState(m_TonemapGenState);
+    pRenderContext->dispatch(4, 1, 1);
+    // end
+    ////////////////////////
+
+
     m_TonemapVars->setTexture("g_InputTexture", m_MainRenderTargetTexture);
     m_TonemapVars->setTexture("g_OutputTexture", m_TonemapTargetTexture);
+    m_TonemapVars->setTexture("g_TonemapLUT", m_TonemapLUT);
     pRenderContext->setComputeState(m_TonemapState);
     pRenderContext->setComputeVars(m_TonemapVars);
     std::uint32_t const xDim = C_RENDER_TARGET_RESOLUTION_X / 16 + 1;

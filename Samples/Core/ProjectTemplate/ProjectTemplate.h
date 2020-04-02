@@ -89,4 +89,22 @@ private:
     ComputeProgram::SharedPtr       m_TonemapProgram;
     ComputeState::SharedPtr         m_TonemapState;
     ComputeVars::SharedPtr          m_TonemapVars;
+
+    // Tonemap LUT generation
+    struct TonemapParams
+    {
+        float P = 1.0f;
+        float a = 1.0f;
+        float m = 0.22f;
+        float l = 0.4f;
+        float c = 1.33f;
+        float b = 0.0f;
+    };
+
+    TonemapParams                   m_TonemapParams;
+    Texture::SharedPtr              m_TonemapLUT;
+    ComputeProgram::SharedPtr       m_TonemapGenProgram;
+    ComputeState::SharedPtr         m_TonemapGenState;
+    ComputeVars::SharedPtr          m_TonemapGenVars;
+
 };
