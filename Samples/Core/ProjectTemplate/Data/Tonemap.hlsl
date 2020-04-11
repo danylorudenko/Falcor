@@ -2,38 +2,27 @@ static const float  C_LUT_CLAMP  = 4.0;
 static const int    C_LUT_SIZE   = 128; 
 static const float  C_LUT_SCALE = C_LUT_SIZE / C_LUT_CLAMP;
 
-RWTexture1D<float> g_TonemapLUT;
+RWTexture1D<float>  g_TonemapLUT;
 
-Texture2D g_InputTexture;
-RWTexture2D<float4> g_OutputTexture;
-
-cbuffer TonemapParamsAlt : register(b0)
+#ifdef LUT_GENERATION
+cbuffer TonemapLUTParams : register(b0)
 {
-    float PMem;
-    float aMem;
-    float mMem;
-    float lMem;
-    float cMem;
-    float bMem;
-    int enableTonemapping;
+    float P;
+    float a;
+    float m;
+    float l;
+    float c;
+    float b;
 }
-
 
 float GTTonemap(float x)
 {
-    float P = 1.0;
-    float a = 1.0;
-    float m = 0.22;
-    float l = 0.4;
-    float c = 1.33;
-    float b = 0.0;
-
-    //float P = PMem;
-    //float a = aMem;
-    //float m = mMem;
-    //float l = lMem;
-    //float c = cMem;
-    //float b = bMem;
+    //float P = 1.0;
+    //float a = 1.0;
+    //float m = 0.22;
+    //float l = 0.4;
+    //float c = 1.33;
+    //float b = 0.0;
 
     float l0 = (P - m) * l / a;
     float S0 = m + l0;
@@ -51,13 +40,29 @@ float GTTonemap(float x)
 
 float mapCompress(float x)
 {
-    //return GTTonemap((float)(x * x / C_LUT_SCALE));
     return GTTonemap(x);
+}
+
+[numthreads(32, 1, 1)]
+void mainGenLUT(uint3 threadDispatchId : SV_DispatchThreadID)
+{
+    g_TonemapLUT[threadDispatchId.x] = mapCompress((float)threadDispatchId.x);
+}
+#endif // LUT_GENERATION
+
+//////////////////////////////////////////////////////////
+
+#ifdef TONEMAPPING_PASS
+Texture2D           g_InputTexture;
+RWTexture2D<float4> g_OutputTexture;
+
+cbuffer TonemapPassParams : register(b0)
+{
+    int enableTonemapping;
 }
 
 float mapSample(float x)
 {
-    //float x1 = sqrt(x) * C_LUT_SCALE;
     float x1 = x;
 
     float f = floor(x1);
@@ -83,23 +88,16 @@ float4 applyTonemap(float4 linearRGB)
     return result;
 }
 
-[numthreads(32, 1, 1)]
-void mainGenLUT(uint3 threadDispatchId : SV_DispatchThreadID)
-{
-    g_TonemapLUT[threadDispatchId.x] = mapCompress((float)threadDispatchId.x);
-}
-
 [numthreads(16, 16, 1)]
 void mainTonemap(uint3 threadDispatchId : SV_DispatchThreadID)
 {
-    //g_OutputTexture[threadDispatchId.xy] = g_InputTexture[threadDispatchId.xy];
-
-    //g_OutputTexture[threadDispatchId.xy] = applyTonemap(g_InputTexture[threadDispatchId.xy]);
-
-    //float4 input = g_InputTexture[threadDispatchId.xy];
-    //if(enableTonemapping)
-        g_OutputTexture[threadDispatchId.xy] = float4(GTTonemap(input.x), GTTonemap(input.y), GTTonemap(input.z), input.a);
-    //else
-    //    g_OutputTexture[threadDispatchId.xy] = input;
+    float4 input = g_InputTexture[threadDispatchId.xy];
+    //float testVar = enableTonemapping;
+    if(enableTonemapping != 0)
+        g_OutputTexture[threadDispatchId.xy] = applyTonemap(input)/* * testVar*/;
+    else
+        g_OutputTexture[threadDispatchId.xy] = input;
 }
+#endif // TONEMAPPING_PASS
+
 

@@ -137,29 +137,21 @@ void ProjectTemplate::onLoad(SampleCallbacks* pSample, RenderContext* pRenderCon
         ResourceFormat::RGBA8Unorm, 1, 1, nullptr,
         Resource::BindFlags::UnorderedAccess | Resource::BindFlags::ShaderResource
     );
-    m_TonemapProgram = ComputeProgram::createFromFile("Tonemap.hlsl", "mainTonemap");
-    m_TonemapState = ComputeState::create();
-    m_TonemapState->setProgram(m_TonemapProgram);
-    m_TonemapVars = ComputeVars::create(m_TonemapProgram->getReflector());
-
     m_TonemapLUT = Texture::create1D(128, ResourceFormat::R8Unorm, 1, 1, nullptr, Resource::BindFlags::UnorderedAccess);
+
+
+
     m_TonemapGenProgram = ComputeProgram::createFromFile("Tonemap.hlsl", "mainGenLUT");
+    m_TonemapGenProgram->addDefine("LUT_GENERATION");
     m_TonemapGenState = ComputeState::create();
     m_TonemapGenState->setProgram(m_TonemapGenProgram);
     m_TonemapGenVars = ComputeVars::create(m_TonemapGenProgram->getReflector());
 
-
-    m_TonemapGenVars->setTexture("g_TonemapLUT", m_TonemapLUT);
-    m_TonemapGenVars["TonemapParamsAlt"]->setVariable("PMem", m_TonemapParams.P);
-    m_TonemapGenVars["TonemapParamsAlt"]->setVariable("aMem", m_TonemapParams.a);
-    m_TonemapGenVars["TonemapParamsAlt"]->setVariable("mMem", m_TonemapParams.m);
-    m_TonemapGenVars["TonemapParamsAlt"]->setVariable("lMem", m_TonemapParams.l);
-    m_TonemapGenVars["TonemapParamsAlt"]->setVariable("cMem", m_TonemapParams.c);
-    m_TonemapGenVars["TonemapParamsAlt"]->setVariable("bMem", m_TonemapParams.b);
-    m_TonemapGenVars["TonemapParamsAlt"]->setVariable("enableTonemapping", enableTonemapping);
-    pRenderContext->setComputeState(m_TonemapGenState);
-    pRenderContext->setComputeVars(m_TonemapGenVars);
-    pRenderContext->dispatch(4, 1, 1);
+    m_TonemapProgram = ComputeProgram::createFromFile("Tonemap.hlsl", "mainTonemap");
+    m_TonemapProgram->addDefine("TONEMAPPING_PASS");
+    m_TonemapState = ComputeState::create();
+    m_TonemapState->setProgram(m_TonemapProgram);
+    m_TonemapVars = ComputeVars::create(m_TonemapProgram->getReflector());
 }
 
 void ProjectTemplate::loadModelFromFile(std::string const& fileName)
@@ -218,28 +210,27 @@ void ProjectTemplate::onFrameRender(SampleCallbacks* pSample, RenderContext* pRe
 
     ////////////////////////
     // for debugging we'll generate TonemapLUT each frame
-    //m_TonemapGenVars->setTexture("g_TonemapLUT", m_TonemapLUT);
-    //m_TonemapGenVars["TonemapParamsAlt"]["PMem"] = m_TonemapParams.P;
-    //m_TonemapGenVars["TonemapParamsAlt"]["aMem"] = m_TonemapParams.a;
-    //m_TonemapGenVars["TonemapParamsAlt"]["mMem"] = m_TonemapParams.m;
-    //m_TonemapGenVars["TonemapParamsAlt"]["lMem"] = m_TonemapParams.l;
-    //m_TonemapGenVars["TonemapParamsAlt"]["cMem"] = m_TonemapParams.c;
-    //m_TonemapGenVars["TonemapParamsAlt"]["bMem"] = m_TonemapParams.b;
-    //m_TonemapGenVars["TonemapParamsAlt"]->setVariable("enableTonemapping", enableTonemapping);
+    m_TonemapGenVars->setTexture("g_TonemapLUT", m_TonemapLUT);
+    m_TonemapGenVars["TonemapLUTParams"]["P"] = m_TonemapParams.P;
+    m_TonemapGenVars["TonemapLUTParams"]["a"] = m_TonemapParams.a;
+    m_TonemapGenVars["TonemapLUTParams"]["m"] = m_TonemapParams.m;
+    m_TonemapGenVars["TonemapLUTParams"]["l"] = m_TonemapParams.l;
+    m_TonemapGenVars["TonemapLUTParams"]["c"] = m_TonemapParams.c;
+    m_TonemapGenVars["TonemapLUTParams"]["b"] = m_TonemapParams.b;
     pRenderContext->setComputeVars(m_TonemapGenVars);
     pRenderContext->setComputeState(m_TonemapGenState);
     pRenderContext->dispatch(4, 1, 1);
     // end
     ////////////////////////
 
-
+    m_TonemapVars["TonemapPassParams"]["enableTonemapping"] = enableTonemapping;
     m_TonemapVars->setTexture("g_InputTexture", m_MainRenderTargetTexture);
     m_TonemapVars->setTexture("g_OutputTexture", m_TonemapTargetTexture);
     m_TonemapVars->setTexture("g_TonemapLUT", m_TonemapLUT);
     pRenderContext->setComputeState(m_TonemapState);
     pRenderContext->setComputeVars(m_TonemapVars);
-    std::uint32_t const xDim = C_RENDER_TARGET_RESOLUTION_X / 16 + 1;
-    std::uint32_t const yDim = C_RENDER_TARGET_RESOLUTION_Y / 16 + 1;
+    std::uint32_t constexpr xDim = C_RENDER_TARGET_RESOLUTION_X / 16 + 1;
+    std::uint32_t constexpr yDim = C_RENDER_TARGET_RESOLUTION_Y / 16 + 1;
     pRenderContext->dispatch(xDim, yDim, 1);
 
     pRenderContext->blit(
