@@ -53,7 +53,7 @@ private:
     // Scene
     /////////////////////////////////////////////
     Model::SharedPtr                m_TestModel;
-    Sampler::SharedPtr              m_Sampler;
+    Sampler::SharedPtr              m_LinRepeatSampler;
 
     Camera::SharedPtr               m_Camera;
     ModelViewCameraController       m_MVCameraController;
@@ -89,6 +89,7 @@ private:
     ComputeProgram::SharedPtr       m_TonemapProgram;
     ComputeState::SharedPtr         m_TonemapState;
     ComputeVars::SharedPtr          m_TonemapVars;
+    Sampler::SharedPtr              m_TonemapLUTSampler;
 
     // Tonemap LUT generation
     struct TonemapParams

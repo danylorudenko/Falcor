@@ -8,7 +8,7 @@
     <ClInclude Include="GlobalConstants.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Data\SimpleShader.ps.hlsl" />
-    <None Include="Data\Tonemap.hlsl" />
+    <None Include="Data\Tonemap.slang" />
+    <None Include="Data\SimpleShader.ps.slang" />
   </ItemGroup>
 </Project>

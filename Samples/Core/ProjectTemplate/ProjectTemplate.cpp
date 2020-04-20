@@ -83,8 +83,8 @@ void ProjectTemplate::onLoad(SampleCallbacks* pSample, RenderContext* pRenderCon
     m_MVCameraController.attachCamera(m_Camera);
 
     m_DirectionalLight = DirectionalLight::create();
-    m_DirectionalLight->setWorldDirection({0.0f, 0.0f, 1.0f});
-    m_DirectionalLight->setIntensity({1.0f, 1.0f, 1.0f});
+    m_DirectionalLight->setWorldDirection({0.0f, 0.1f, 1.0f});
+    m_DirectionalLight->setIntensity({2.0f, 2.0f, 1.8f});
     m_DirectionalLight->setWorldParams({0.0f, 0.0f, 0.0f}, 1000.0f);
 
     m_GraphicsState = GraphicsState::create();
@@ -99,14 +99,24 @@ void ProjectTemplate::onLoad(SampleCallbacks* pSample, RenderContext* pRenderCon
     dsDesc.setDepthWriteMask(true);
     m_DepthStencilState = DepthStencilState::create(dsDesc);
 
-    m_GraphicsProgram = GraphicsProgram::createFromFile("SimpleShader.ps.hlsl", "", "main");
+    m_GraphicsProgram = GraphicsProgram::createFromFile("SimpleShader.ps.slang", "", "main");
     m_GraphicsVars = GraphicsVars::create(m_GraphicsProgram->getReflector());
 
     Sampler::Desc samplerDesc;
     samplerDesc.setFilterMode(Sampler::Filter::Linear, Sampler::Filter::Linear, Sampler::Filter::Linear);
-    m_Sampler = Sampler::create(samplerDesc);
+    m_LinRepeatSampler = Sampler::create(samplerDesc);
 
-    m_SkyBox = SkyBox::create("J:\\Assets\\SunTemple_v3\\SunTemple\\SunTemple_Skybox.hdr", true, m_Sampler);
+
+    Texture::SharedPtr skyboxTexture = createTextureCubeFromFiles({
+        "J:\\Assets\\skybox\\skybox\\right.jpg",
+        "J:\\Assets\\skybox\\skybox\\left.jpg",
+        "J:\\Assets\\skybox\\skybox\\top.jpg",
+        "J:\\Assets\\skybox\\skybox\\bottom.jpg",
+        "J:\\Assets\\skybox\\skybox\\front.jpg",
+        "J:\\Assets\\skybox\\skybox\\back.jpg",
+        });
+
+    m_SkyBox = SkyBox::create(skyboxTexture, m_LinRepeatSampler);
 
     m_MainScene = Scene::create("MainScene");
     m_MainSceneRenderer = SceneRenderer::create(m_MainScene);
@@ -126,8 +136,6 @@ void ProjectTemplate::onLoad(SampleCallbacks* pSample, RenderContext* pRenderCon
         Resource::BindFlags::DepthStencil
     );
 
-    //m_MainRenderTargetView = m_MainRenderTargetTexture->getRTV();
-
     m_MainFbo = Fbo::create();
     m_MainFbo->attachColorTarget(m_MainRenderTargetTexture, 0, 0, 0, 1);
     m_MainFbo->attachDepthStencilTarget(m_MainRenderTargetDepth, 0, 0, 1);
@@ -137,21 +145,26 @@ void ProjectTemplate::onLoad(SampleCallbacks* pSample, RenderContext* pRenderCon
         ResourceFormat::RGBA8Unorm, 1, 1, nullptr,
         Resource::BindFlags::UnorderedAccess | Resource::BindFlags::ShaderResource
     );
-    m_TonemapLUT = Texture::create1D(128, ResourceFormat::R8Unorm, 1, 1, nullptr, Resource::BindFlags::UnorderedAccess);
+    m_TonemapLUT = Texture::create1D(128, ResourceFormat::R8Unorm, 1, 1, nullptr, Resource::BindFlags::UnorderedAccess | Resource::BindFlags::ShaderResource);
 
 
 
-    m_TonemapGenProgram = ComputeProgram::createFromFile("Tonemap.hlsl", "mainGenLUT");
+    m_TonemapGenProgram = ComputeProgram::createFromFile("Tonemap.slang", "mainGenLUT");
     m_TonemapGenProgram->addDefine("LUT_GENERATION");
     m_TonemapGenState = ComputeState::create();
     m_TonemapGenState->setProgram(m_TonemapGenProgram);
     m_TonemapGenVars = ComputeVars::create(m_TonemapGenProgram->getReflector());
 
-    m_TonemapProgram = ComputeProgram::createFromFile("Tonemap.hlsl", "mainTonemap");
+    m_TonemapProgram = ComputeProgram::createFromFile("Tonemap.slang", "mainTonemap");
     m_TonemapProgram->addDefine("TONEMAPPING_PASS");
     m_TonemapState = ComputeState::create();
     m_TonemapState->setProgram(m_TonemapProgram);
     m_TonemapVars = ComputeVars::create(m_TonemapProgram->getReflector());
+
+    Sampler::Desc lutSampDesc;
+    lutSampDesc.setFilterMode(Sampler::Filter::Linear, Sampler::Filter::Linear, Sampler::Filter::Linear);
+    lutSampDesc.setAddressingMode(Sampler::AddressMode::Clamp, Sampler::AddressMode::Clamp, Sampler::AddressMode::Clamp);
+    m_TonemapLUTSampler = Sampler::create(lutSampDesc);
 }
 
 void ProjectTemplate::loadModelFromFile(std::string const& fileName)
@@ -164,7 +177,7 @@ void ProjectTemplate::loadModelFromFile(std::string const& fileName)
         return;
     }
 
-    m_TestModel->bindSamplerToMaterials(m_Sampler);
+    m_TestModel->bindSamplerToMaterials(m_LinRepeatSampler);
     resetCamera();
 
     m_MainScene->addModelInstance(m_TestModel, "MainModelInstance");
@@ -211,12 +224,12 @@ void ProjectTemplate::onFrameRender(SampleCallbacks* pSample, RenderContext* pRe
     ////////////////////////
     // for debugging we'll generate TonemapLUT each frame
     m_TonemapGenVars->setTexture("g_TonemapLUT", m_TonemapLUT);
-    m_TonemapGenVars["TonemapLUTParams"]["P"] = m_TonemapParams.P;
-    m_TonemapGenVars["TonemapLUTParams"]["a"] = m_TonemapParams.a;
-    m_TonemapGenVars["TonemapLUTParams"]["m"] = m_TonemapParams.m;
-    m_TonemapGenVars["TonemapLUTParams"]["l"] = m_TonemapParams.l;
-    m_TonemapGenVars["TonemapLUTParams"]["c"] = m_TonemapParams.c;
-    m_TonemapGenVars["TonemapLUTParams"]["b"] = m_TonemapParams.b;
+    m_TonemapGenVars["GTParams"]["P"] = m_TonemapParams.P;
+    m_TonemapGenVars["GTParams"]["a"] = m_TonemapParams.a;
+    m_TonemapGenVars["GTParams"]["m"] = m_TonemapParams.m;
+    m_TonemapGenVars["GTParams"]["l"] = m_TonemapParams.l;
+    m_TonemapGenVars["GTParams"]["c"] = m_TonemapParams.c;
+    m_TonemapGenVars["GTParams"]["b"] = m_TonemapParams.b;
     pRenderContext->setComputeVars(m_TonemapGenVars);
     pRenderContext->setComputeState(m_TonemapGenState);
     pRenderContext->dispatch(4, 1, 1);
@@ -224,9 +237,10 @@ void ProjectTemplate::onFrameRender(SampleCallbacks* pSample, RenderContext* pRe
     ////////////////////////
 
     m_TonemapVars["TonemapPassParams"]["enableTonemapping"] = enableTonemapping;
+    m_TonemapVars->setTexture("g_TonemapLUT", m_TonemapLUT);
+    m_TonemapVars->setSampler("g_LUTSamplerState", m_TonemapLUTSampler);
     m_TonemapVars->setTexture("g_InputTexture", m_MainRenderTargetTexture);
     m_TonemapVars->setTexture("g_OutputTexture", m_TonemapTargetTexture);
-    m_TonemapVars->setTexture("g_TonemapLUT", m_TonemapLUT);
     pRenderContext->setComputeState(m_TonemapState);
     pRenderContext->setComputeVars(m_TonemapVars);
     std::uint32_t constexpr xDim = C_RENDER_TARGET_RESOLUTION_X / 16 + 1;
@@ -301,7 +315,7 @@ void ProjectTemplate::resetCamera()
 
         // Update the controllers
         m_MVCameraController.setModelParams(modelCenter, radius, 3.5f);
-        m_FPCameraController.setCameraSpeed(radius * 0.25f);
+        m_FPCameraController.setCameraSpeed(radius * 0.05f);
     }
 }
 

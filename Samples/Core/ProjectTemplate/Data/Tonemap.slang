@@ -1,11 +1,14 @@
-static const float  C_LUT_CLAMP  = 4.0;
-static const int    C_LUT_SIZE   = 128; 
-static const float  C_LUT_SCALE = C_LUT_SIZE / C_LUT_CLAMP;
+static const float C_LUT_MAX_VALUE          = 4.0;
+static const float C_LUT_SIZE               = 128.0;
+static const float C_LUT_COMPRESS_FACTOR    = 1.0 / (C_LUT_SIZE / C_LUT_MAX_VALUE);
+static const float C_LUT_SAMPLE_FACTOR      = 1.0 / C_LUT_MAX_VALUE;
+
+
+#if defined(LUT_GENERATION)
 
 RWTexture1D<float>  g_TonemapLUT;
 
-#ifdef LUT_GENERATION
-cbuffer TonemapLUTParams : register(b0)
+cbuffer GTParams : register(b0)
 {
     float P;
     float a;
@@ -17,13 +20,6 @@ cbuffer TonemapLUTParams : register(b0)
 
 float GTTonemap(float x)
 {
-    //float P = 1.0;
-    //float a = 1.0;
-    //float m = 0.22;
-    //float l = 0.4;
-    //float c = 1.33;
-    //float b = 0.0;
-
     float l0 = (P - m) * l / a;
     float S0 = m + l0;
     float S1 = m + a * l0;
@@ -40,7 +36,7 @@ float GTTonemap(float x)
 
 float mapCompress(float x)
 {
-    return GTTonemap(x);
+    return GTTonemap(x * C_LUT_COMPRESS_FACTOR);
 }
 
 [numthreads(32, 1, 1)]
@@ -53,27 +49,21 @@ void mainGenLUT(uint3 threadDispatchId : SV_DispatchThreadID)
 //////////////////////////////////////////////////////////
 
 #ifdef TONEMAPPING_PASS
+SamplerState        g_LUTSamplerState;
+Texture1D           g_TonemapLUT;
+
 Texture2D           g_InputTexture;
 RWTexture2D<float4> g_OutputTexture;
 
-cbuffer TonemapPassParams : register(b0)
+cbuffer TonemapPassParams : register(b1)
 {
     int enableTonemapping;
 }
 
 float mapSample(float x)
 {
-    float x1 = x;
-
-    float f = floor(x1);
-    float fSample = g_TonemapLUT[f].x;
-
-    float c = ceil(x1);
-    float cSample = g_TonemapLUT[c].x;
-
-    float toFloor = x1 - f;
-
-    return smoothstep(fSample, cSample, toFloor);
+    float xS = x * C_LUT_SAMPLE_FACTOR;
+    return g_TonemapLUT.SampleLevel(g_LUTSamplerState, xS, 0).x;
 }
 
 float4 applyTonemap(float4 linearRGB)
@@ -92,11 +82,19 @@ float4 applyTonemap(float4 linearRGB)
 void mainTonemap(uint3 threadDispatchId : SV_DispatchThreadID)
 {
     float4 input = g_InputTexture[threadDispatchId.xy];
-    //float testVar = enableTonemapping;
+
+    float4 result;
     if(enableTonemapping != 0)
-        g_OutputTexture[threadDispatchId.xy] = applyTonemap(input)/* * testVar*/;
+    {
+        result = applyTonemap(input);
+    }
     else
-        g_OutputTexture[threadDispatchId.xy] = input;
+    {
+        result = input;
+    }
+
+    float4 sRGB = pow(result, 1.0 / 2.2);
+    g_OutputTexture[threadDispatchId.xy] = sRGB;
 }
 #endif // TONEMAPPING_PASS
 

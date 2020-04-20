@@ -23,12 +23,12 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <None Include="Data\SimpleShader.ps.hlsl">
+    <None Include="Data\SimpleShader.ps.slang">
       <FileType>Document</FileType>
     </None>
   </ItemGroup>
   <ItemGroup>
-    <None Include="Data\Tonemap.hlsl">
+    <None Include="Data\Tonemap.slang">
       <FileType>Document</FileType>
     </None>
   </ItemGroup>
