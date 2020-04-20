@@ -27,6 +27,7 @@
 ***************************************************************************/
 #include "Framework.h"
 #include "TextureHelper.h"
+#include "API/Device.h"
 #include "API/Texture.h"
 #include "Utils/Bitmap.h"
 #include "Utils/DDSHeader.h"
@@ -733,4 +734,38 @@ namespace Falcor
         return pTex;
     }
 #undef no_srgb
+
+    Texture::SharedPtr createTextureCubeFromFiles(const std::vector<std::string>& fileNames, Texture::BindFlags bindFlags)
+    {
+        constexpr std::size_t kCubemapFaces = 6;
+
+        assert(fileNames.size() == kCubemapFaces && "Cubemap file list must contain 6 faces.");
+
+        std::vector<Bitmap::UniqueConstPtr> bitmaps(kCubemapFaces);
+
+        for (std::size_t i = 0; i < kCubemapFaces; i++)
+        {
+            bitmaps[i] = Bitmap::createFromFile(fileNames[i], kTopDown);
+
+            if (i > 0)
+            {
+                assert(bitmaps[i]->getWidth() == bitmaps[i-1]->getWidth());
+                assert(bitmaps[i]->getHeight() == bitmaps[i-1]->getHeight());
+                assert(bitmaps[i]->getFormat() == bitmaps[i-1]->getFormat());
+            }
+        }
+
+        Texture::SharedPtr pTex = Texture::createCube(bitmaps[0]->getWidth(), bitmaps[0]->getHeight(), bitmaps[0]->getFormat(), 1, 1, nullptr, bindFlags);
+
+        auto* pRenderContext = gpDevice->getRenderContext();
+        for (std::size_t i = 0; i < kCubemapFaces; i++)
+        {
+            auto subresourceIndex = pTex->getSubresourceIndex((std::uint32_t)i, 0);
+            pRenderContext->updateSubresourceData(pTex.get(), subresourceIndex, bitmaps[i]->getData());
+        }
+
+        pTex->invalidateViews();
+
+        return pTex;
+    }
 }

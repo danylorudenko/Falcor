@@ -27,6 +27,7 @@
 ***************************************************************************/
 #pragma once
 #include <string>
+#include <vector>
 #include "API/Texture.h"
 namespace Falcor
 {
@@ -42,6 +43,12 @@ namespace Falcor
         \param[in] bindFlags The bind flags to create the texture with
     */
     Texture::SharedPtr createTextureFromFile(const std::string& filename, bool generateMipLevels, bool loadAsSrgb, Texture::BindFlags bindFlags = Texture::BindFlags::ShaderResource);
+
+    /** Create a new cubemap texture object from a face files. Order: right, left, top, bottom, front, back.
+        \param[in] filename List of files that contain faced of the cubemap. Can also include a full path or relative path from a data directory
+        \param[in] bindFlags The bind flags to create the texture with
+    */
+    Texture::SharedPtr createTextureCubeFromFiles(const std::vector<std::string>& fileNames, Texture::BindFlags bindFlags = Texture::BindFlags::ShaderResource);
 
     /*! @} */
 }
